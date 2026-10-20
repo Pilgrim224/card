@@ -34,60 +34,61 @@
       height: 100%;
       z-index: 10;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: 30px 20px;
+      justify-content: flex-end; /* Сдвигаем вправо */
+      align-items: flex-end;     /* Сдвигаем вниз */
+      padding: 20px;
       pointer-events: none;
     }
+    
+    /* Компактная карточка в правом нижнем углу */
     .card-box {
-      background: rgba(15, 15, 25, 0.8);
+      background: rgba(15, 15, 25, 0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 28px 24px;
-      border-radius: 24px;
-      text-align: center;
-      max-width: 380px;
-      width: 90%;
-      box-shadow: 0 10px 35px rgba(0,0,0,0.6);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+      padding: 18px 20px;
+      border-radius: 18px;
+      text-align: right; /* Выравнивание по правому краю */
+      max-width: 290px;  /* Компактный размер */
+      width: 85%;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      transition: opacity 0.5s ease, transform 0.5s ease;
       pointer-events: auto;
     }
     
-    /* Красивый крупный заголовок */
+    /* Уменьшенный аккуратный заголовок */
     h1.hb-title {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 12px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
       background: linear-gradient(135deg, #ff769c, #ff4b72, #ffd166);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 20px rgba(255, 118, 156, 0.3);
-      letter-spacing: 0.5px;
+      text-shadow: 0 0 15px rgba(255, 118, 156, 0.3);
       line-height: 1.2;
     }
 
     p {
-      font-size: 1rem;
-      line-height: 1.5;
+      font-size: 0.88rem;
+      line-height: 1.4;
       color: #e2e8f0;
-      margin-bottom: 22px;
+      margin-bottom: 14px;
     }
+
     .btn {
       background: linear-gradient(135deg, #ff4b72, #ff769c);
       color: #fff;
       border: none;
-      padding: 14px 32px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      border-radius: 30px;
+      padding: 10px 22px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 20px;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(255, 75, 114, 0.5);
+      box-shadow: 0 4px 15px rgba(255, 75, 114, 0.4);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .btn:active {
-      transform: scale(0.96);
+      transform: scale(0.95);
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -97,15 +98,11 @@
   <div id="canvas-container"></div>
 
   <div class="ui-overlay">
-    <div></div>
-    
     <div class="card-box" id="card">
       <h1 class="hb-title" id="title">С Днём Рождения! 🎂🎉</h1>
       <p id="description">У меня есть кое-что особенное для тебя. Нажми кнопку ниже, чтобы открыть сюрприз...</p>
       <button class="btn" id="next-btn" onclick="nextStep()">Открыть 🎁</button>
     </div>
-
-    <div></div>
   </div>
 
   <script>
@@ -230,7 +227,7 @@
         btn.innerText = "Далее 🌌";
       } else if (currentStep === 2) {
         card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
+        card.style.transform = 'translateY(15px)';
         card.style.pointerEvents = 'none';
       }
     }
