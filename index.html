@@ -93,6 +93,11 @@
 
   <div id="canvas-container"></div>
 
+  <!-- Аудио плеер для фоновой музыки -->
+  <audio id="bg-music" loop>
+    <source src="the_candlelit_waltz.mp3" type="audio/mp3">
+  </audio>
+
   <div class="ui-overlay">
     <div class="card-box" id="card">
       <div id="text-content">
@@ -105,7 +110,7 @@
 
   <script>
     // --- НАСТРОЙКИ ---
-    const PHOTO_URL = 'IMG-20250820-113600.jpg'; // Твоё фото
+    const PHOTO_URL = 'IMG-20250820-113600.jpg'; 
     
     const GREETING_TITLE = "С Днём Рождения! 🎂🎉";
     const GREETING_TEXT = "Сегодня твой день, и я хочу пожелать тебе бесконечного счастья, улыбок и тепла! Пусть каждый миг будет наполнен волшебством. Оставайся такой же невероятной и потрясающей! ✨💖";
@@ -122,9 +127,6 @@
     let targetRotationX = 0;
     let targetRotationY = 0;
     let pointerX = 0, pointerY = 0;
-
-    // Данные для салютов из сердечек на 1 шаге
-    const fireworkBursts = [];
 
     function showText(titleText, descText, hideAfterMs) {
       const textContent = document.getElementById('text-content');
@@ -156,7 +158,6 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // --- ТЕКСТУРА СЕРДЕЧКА ---
     function createHeartTexture() {
       const canvas = document.createElement('canvas');
       canvas.width = 64; canvas.height = 64;
@@ -175,8 +176,6 @@
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
-    
-    // Базовые позиции для анимации салютов на 1 шаге
     const baseVelocities = new Float32Array(PARTICLE_COUNT * 3);
 
     const targetPhoto = new Float32Array(PARTICLE_COUNT * 3);
@@ -193,7 +192,6 @@
       
       colors[i] = 1.0; colors[i + 1] = 0.4; colors[i + 2] = 0.6;
 
-      // Скорости для плавающего хаоса / салютов
       baseVelocities[i] = (Math.random() - 0.5) * 0.4;
       baseVelocities[i+1] = (Math.random() - 0.5) * 0.4;
       baseVelocities[i+2] = (Math.random() - 0.5) * 0.4;
@@ -214,12 +212,11 @@
     const particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
 
-    // Функция запуска салюта из сердечек
     function triggerHeartFirework() {
       const cx = (Math.random() - 0.5) * 120;
       const cy = (Math.random() - 0.5) * 80;
       const cz = (Math.random() - 0.5) * 40;
-      const burstParticlesCount = 300; // сколько сердечек участвуют во взрыве
+      const burstParticlesCount = 300; 
       const startIndex = Math.floor(Math.random() * (PARTICLE_COUNT - burstParticlesCount));
 
       for (let i = 0; i < burstParticlesCount; i++) {
@@ -236,14 +233,12 @@
         baseVelocities[idx+1] = Math.sin(phi) * Math.sin(theta) * speed;
         baseVelocities[idx+2] = Math.cos(phi) * speed;
         
-        // Яркий праздничный цвет искры-сердечка
         colors[idx] = 1.0;
         colors[idx+1] = 0.3 + Math.random() * 0.5;
         colors[idx+2] = 0.6 + Math.random() * 0.4;
       }
     }
 
-    // --- ПОДГОТОВКА ФИГУР ---
     function generateGalaxyTargets() {
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const i3 = i * 3;
@@ -365,6 +360,12 @@
 
     // --- УПРАВЛЕНИЕ ШАГАМИ ---
     function nextStep() {
+      const music = document.getElementById('bg-music');
+      if (music && currentStep === 0) {
+        music.volume = 0.6;
+        music.play().catch(e => console.log("Автозапуск заблокирован браузером", e));
+      }
+
       const card = document.getElementById('card');
       const btn = document.getElementById('next-btn');
       currentStep++;
@@ -378,7 +379,6 @@
       } else if (currentStep === 3) {
         showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 6000);
         
-        // Полностью убираем плашку навсегда, финал — галактика
         setTimeout(() => {
           card.style.opacity = '0';
           card.style.transform = 'translateY(15px)';
@@ -432,35 +432,30 @@
 
       for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
         if (currentStep === 0) {
-          // ШАГ 0: Просто полет сердечек
           currentPos[i] += baseVelocities[i];
           currentPos[i+1] += baseVelocities[i+1];
           currentPos[i+2] += baseVelocities[i+2];
-          // Возврат в границы экрана
           if (Math.abs(currentPos[i]) > 150) baseVelocities[i] *= -1;
           if (Math.abs(currentPos[i+1]) > 150) baseVelocities[i+1] *= -1;
           if (Math.abs(currentPos[i+2]) > 150) baseVelocities[i+2] *= -1;
 
         } else if (currentStep === 1) {
-          // ШАГ 1: Поздравление + салюты из сердечек
           currentPos[i] += baseVelocities[i];
           currentPos[i+1] += baseVelocities[i+1];
           currentPos[i+2] += baseVelocities[i+2];
 
-          baseVelocities[i] *= 0.96;   // затухание разлета
+          baseVelocities[i] *= 0.96;   
           baseVelocities[i+1] *= 0.96; 
           baseVelocities[i+2] *= 0.96;
-          baseVelocities[i+1] -= 0.01;  // легкая гравитация
+          baseVelocities[i+1] -= 0.01;  
 
           if (Math.abs(currentPos[i]) > 150) currentPos[i] *= -0.9;
           if (Math.abs(currentPos[i+1]) > 150) currentPos[i+1] *= -0.9;
 
         } else if (currentStep === 2) {
-          // ШАГ 2: Сборка портрета
           currentPos[i] += (targetPhoto[i] - currentPos[i]) * speed; 
           currentColors[i] += (targetPhotoColors[i] - currentColors[i]) * speed;
         } else if (currentStep === 3) {
-          // ШАГ 3: Галактика / Слова
           if (showWords) {
             currentPos[i] += (targetWords[i] - currentPos[i]) * (speed * 1.5); 
             currentColors[i] += (targetWordsColors[i] - currentColors[i]) * (speed * 1.5);
@@ -472,12 +467,10 @@
       }
       posAttr.needsUpdate = true; colorAttr.needsUpdate = true;
 
-      // Запуск салютов из сердечек на 1 шаге
       if (currentStep === 1 && Math.random() < 0.05) {
         triggerHeartFirework();
       }
 
-      // Вращение сцены
       if (currentStep === 3) {
         particleSystem.rotation.y += (targetRotationY - particleSystem.rotation.y) * 0.08;
         particleSystem.rotation.x += (targetRotationX - particleSystem.rotation.x) * 0.08;
