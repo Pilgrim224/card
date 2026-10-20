@@ -22,6 +22,7 @@
       touch-action: none;
     }
     
+    /* Контейнер основной карточки справа */
     .ui-overlay {
       position: absolute;
       bottom: 20px;
@@ -33,7 +34,33 @@
       align-items: flex-end;
     }
     
-    /* Карточка стала чуть шире для удобного чтения текста */
+    /* Неприметная кнопка "Назад" слева */
+    .back-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(15, 15, 25, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: none; /* Скрыта на первом экране */
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+    .back-btn:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
     .card-box {
       background: rgba(15, 15, 25, 0.75);
       backdrop-filter: blur(12px);
@@ -43,8 +70,8 @@
       border-radius: 16px;
       text-align: right;
       max-width: 320px; 
-      max-height: 70vh; /* Ограничение высоты */
-      overflow-y: auto; /* Добавлена прокрутка для длинного текста */
+      max-height: 70vh; 
+      overflow-y: auto; 
       box-shadow: 0 8px 25px rgba(0,0,0,0.6);
       transition: opacity 0.5s ease, transform 0.5s ease;
       pointer-events: auto;
@@ -53,12 +80,11 @@
       align-items: flex-end;
     }
 
-    /* Эстетичный скроллбар для текста */
     .card-box::-webkit-scrollbar { width: 4px; }
     .card-box::-webkit-scrollbar-thumb { background: rgba(255, 75, 114, 0.5); border-radius: 4px; }
 
     #text-content {
-      transition: opacity 1s ease;
+      transition: opacity 0.5s ease;
       opacity: 1;
       width: 100%;
     }
@@ -78,7 +104,7 @@
       line-height: 1.5;
       color: #e2e8f0;
       margin-bottom: 16px;
-      text-align: left; /* Текст письма выравниваем по левому краю для удобства */
+      text-align: left; 
     }
 
     .btn {
@@ -108,6 +134,9 @@
     <source src="the_candlelit_waltz.mp3" type="audio/mp3">
   </audio>
 
+  <!-- Кнопка назад -->
+  <div class="back-btn" id="back-btn" onclick="prevStep()">&#10094;</div>
+
   <div class="ui-overlay">
     <div class="card-box" id="card">
       <div id="text-content">
@@ -123,8 +152,6 @@
     const PHOTO_URL = 'IMG-20250820-113600.jpg'; 
     
     const GREETING_TITLE = "С Днём Рождения, любимая! 🎂🎉";
-    
-    // Большой текст с абзацами (теги <br><br> делают отступы)
     const GREETING_TEXT = `Моя любимая, нежная и самая невероятная!<br><br>
     Сегодня тебе исполняется двадцать лет. Это совершенно потрясающий возраст — время, когда весь мир открыт перед тобой, когда самые смелые мечты становятся осязаемыми, а впереди ждет столько прекрасного. И я безумно счастлив, что могу разделить эту важную главу твоей жизни вместе с тобой.<br><br>
     Ты — самое светлое, что со мной случилось. Ты наполнила мои дни смыслом, уютом и абсолютным теплом. Я люблю в тебе всё: твой искренний смех, то, как ты смотришь на меня, твои идеи и твою заботу. Рядом с тобой мне хочется сворачивать горы и становиться лучше каждый день.<br><br>
@@ -135,7 +162,10 @@
     const COMPLIMENTS = ["ты милая ✨", "ты красивая ❤️", "ты лучшая 🎉", "восхитительная 🌸", "любимая 💕"];
 
     let currentStep = 0;
+    
     let textTimer;
+    let cardHideTimer; // Для контроля скрытия плашки
+    
     let isInteracting = false;      
     let showWords = false;         
     let interactionTimeout = null;
@@ -144,19 +174,29 @@
     let targetRotationY = 0;
     let pointerX = 0, pointerY = 0;
 
-    function showText(titleText, descText, textAlign = 'left') {
+    function showText(titleText, descText, textAlign = 'left', hideAfterMs = 0) {
       const textContent = document.getElementById('text-content');
       const title = document.getElementById('title');
       const desc = document.getElementById('description');
 
-      title.innerText = titleText;
-      desc.innerHTML = descText;
+      clearTimeout(textTimer); 
       
-      title.style.textAlign = 'right';
-      desc.style.textAlign = textAlign; // Позволяет менять выравнивание (письмо слева, остальное справа)
+      // Плавная смена текста
+      textContent.style.opacity = '0';
       
-      textContent.style.display = 'block';
-      setTimeout(() => { textContent.style.opacity = '1'; }, 50);
+      setTimeout(() => {
+        title.innerText = titleText;
+        desc.innerHTML = descText;
+        title.style.textAlign = 'right';
+        desc.style.textAlign = textAlign; 
+        textContent.style.opacity = '1';
+      }, 300);
+
+      if (hideAfterMs > 0) {
+        textTimer = setTimeout(() => {
+          textContent.style.opacity = '0';
+        }, hideAfterMs);
+      }
     }
 
     const container = document.getElementById('canvas-container');
@@ -200,9 +240,7 @@
       positions[i] = (Math.random() - 0.5) * 300;
       positions[i + 1] = (Math.random() - 0.5) * 300;
       positions[i + 2] = (Math.random() - 0.5) * 300;
-      
       colors[i] = 1.0; colors[i + 1] = 0.4; colors[i + 2] = 0.6;
-
       baseVelocities[i] = (Math.random() - 0.5) * 0.4;
       baseVelocities[i+1] = (Math.random() - 0.5) * 0.4;
       baseVelocities[i+2] = (Math.random() - 0.5) * 0.4;
@@ -232,21 +270,14 @@
 
       for (let i = 0; i < burstParticlesCount; i++) {
         let idx = (startIndex + i) * 3;
-        positions[idx] = cx;
-        positions[idx+1] = cy;
-        positions[idx+2] = cz;
-
+        positions[idx] = cx; positions[idx+1] = cy; positions[idx+2] = cz;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos((Math.random() * 2) - 1);
         const speed = Math.random() * 2.5 + 1.0;
-
         baseVelocities[idx] = Math.sin(phi) * Math.cos(theta) * speed;
         baseVelocities[idx+1] = Math.sin(phi) * Math.sin(theta) * speed;
         baseVelocities[idx+2] = Math.cos(phi) * speed;
-        
-        colors[idx] = 1.0;
-        colors[idx+1] = 0.3 + Math.random() * 0.5;
-        colors[idx+2] = 0.6 + Math.random() * 0.4;
+        colors[idx] = 1.0; colors[idx+1] = 0.3 + Math.random() * 0.5; colors[idx+2] = 0.6 + Math.random() * 0.4;
       }
     }
 
@@ -260,11 +291,9 @@
         const randomX = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
         const randomY = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
         const randomZ = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
-        
         targetGalaxy[i3] = Math.cos(branchAngle + spin) * radius + randomX;
         targetGalaxy[i3 + 1] = randomY;
         targetGalaxy[i3 + 2] = Math.sin(branchAngle + spin) * radius + randomZ;
-        
         targetGalaxyColors[i3] = 0.7 + Math.random() * 0.3;
         targetGalaxyColors[i3 + 1] = 0.3 + Math.random() * 0.4;
         targetGalaxyColors[i3 + 2] = 0.8 + Math.random() * 0.2;
@@ -281,10 +310,8 @@
       const aspect = img.width / img.height;
       const height = Math.floor(Math.sqrt(PARTICLE_COUNT / aspect));
       const width = Math.floor(height * aspect);
-      
       imgCanvas.width = width; imgCanvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
-      
       try {
         const imgData = ctx.getImageData(0, 0, width, height).data;
         let pIndex = 0;
@@ -293,11 +320,9 @@
             if (pIndex >= PARTICLE_COUNT) break;
             const i3 = pIndex * 3;
             const pixelIndex = (y * width + x) * 4;
-            
             targetPhoto[i3] = (x - width / 2) * 0.8;
             targetPhoto[i3 + 1] = -(y - height / 2) * 0.8;
             targetPhoto[i3 + 2] = 0;
-            
             targetPhotoColors[i3] = imgData[pixelIndex] / 255;
             targetPhotoColors[i3 + 1] = imgData[pixelIndex + 1] / 255;
             targetPhotoColors[i3 + 2] = imgData[pixelIndex + 2] / 255;
@@ -307,124 +332,128 @@
         for (; pIndex < PARTICLE_COUNT; pIndex++) {
             targetPhoto[pIndex * 3] = 0; targetPhoto[pIndex * 3 + 1] = 0; targetPhoto[pIndex * 3 + 2] = -1000;
         }
-      } catch(e) { console.error("Ошибка загрузки пикселей", e); }
+      } catch(e) {}
     };
 
     function generateWordsTargets() {
       const textCanvas = document.createElement('canvas');
       const tCtx = textCanvas.getContext('2d');
       const particlesPerWord = Math.floor(PARTICLE_COUNT / COMPLIMENTS.length);
-
       const offsets = [
-        { x: -30, y: 25,  z: 10 },  
-        { x: 30,  y: 18,  z: -10 }, 
-        { x: 0,   y: 0,   z: 15 },  
-        { x: -32, y: -18, z: -5 },  
-        { x: 28,  y: -25, z: 5 }   
+        { x: -30, y: 25,  z: 10 }, { x: 30,  y: 18,  z: -10 }, { x: 0,   y: 0,   z: 15 },
+        { x: -32, y: -18, z: -5 }, { x: 28,  y: -25, z: 5 }   
       ];
-
       for (let w = 0; w < COMPLIMENTS.length; w++) {
-        const wordText = COMPLIMENTS[w];
-        const offset = offsets[w];
-
+        const wordText = COMPLIMENTS[w]; const offset = offsets[w];
         textCanvas.width = 300; textCanvas.height = 80;
-        tCtx.clearRect(0, 0, 300, 80);
-        tCtx.fillStyle = '#ffffff';
+        tCtx.clearRect(0, 0, 300, 80); tCtx.fillStyle = '#ffffff';
         tCtx.font = 'bold 30px "Segoe UI", Roboto, sans-serif';
         tCtx.textAlign = 'center'; tCtx.textBaseline = 'middle';
         tCtx.fillText(wordText, 150, 40);
-
         const imgData = tCtx.getImageData(0, 0, 300, 80).data;
         const validPixels = [];
-
         for (let y = 0; y < 80; y += 1.4) {
           for (let x = 0; x < 300; x += 1.4) {
             const idx = (Math.floor(y) * 300 + Math.floor(x)) * 4;
-            if (imgData[idx + 3] > 100) { 
-              validPixels.push({ x: (x - 150) * 0.23, y: -(y - 40) * 0.23 });
-            }
+            if (imgData[idx + 3] > 100) validPixels.push({ x: (x - 150) * 0.23, y: -(y - 40) * 0.23 });
           }
         }
-
-        const startIdx = w * particlesPerWord;
-        const endIdx = startIdx + particlesPerWord;
-
+        const startIdx = w * particlesPerWord; const endIdx = startIdx + particlesPerWord;
         for (let i = startIdx; i < endIdx; i++) {
           const i3 = i * 3;
           if (validPixels.length > 0) {
             const p = validPixels[Math.floor(Math.random() * validPixels.length)];
-            targetWords[i3] = p.x + offset.x;
-            targetWords[i3 + 1] = p.y + offset.y;
-            targetWords[i3 + 2] = (Math.random() - 0.5) * 3 + offset.z;
+            targetWords[i3] = p.x + offset.x; targetWords[i3 + 1] = p.y + offset.y; targetWords[i3 + 2] = (Math.random() - 0.5) * 3 + offset.z;
           } else {
-            targetWords[i3] = (Math.random() - 0.5) * 20 + offset.x;
-            targetWords[i3 + 1] = (Math.random() - 0.5) * 10 + offset.y;
-            targetWords[i3 + 2] = offset.z;
+            targetWords[i3] = (Math.random() - 0.5) * 20 + offset.x; targetWords[i3 + 1] = (Math.random() - 0.5) * 10 + offset.y; targetWords[i3 + 2] = offset.z;
           }
-          targetWordsColors[i3] = 1.0; 
-          targetWordsColors[i3 + 1] = 0.35 + Math.random() * 0.35; 
-          targetWordsColors[i3 + 2] = 0.55 + Math.random() * 0.45; 
+          targetWordsColors[i3] = 1.0; targetWordsColors[i3 + 1] = 0.35 + Math.random() * 0.35; targetWordsColors[i3 + 2] = 0.55 + Math.random() * 0.45; 
         }
       }
     }
     generateWordsTargets();
 
-    // --- УПРАВЛЕНИЕ ШАГАМИ ---
+    // --- ЛОГИКА ШАГОВ (Вперёд и Назад) ---
     function nextStep() {
-      const music = document.getElementById('bg-music');
-      if (music && currentStep === 0) {
-        music.volume = 0.6;
-        music.play().catch(e => console.log("Автозапуск заблокирован браузером", e));
+      if (currentStep === 0) {
+        const music = document.getElementById('bg-music');
+        if (music) { music.volume = 0.6; music.play().catch(e => console.log(e)); }
       }
+      if (currentStep < 3) {
+        currentStep++;
+        updateUI();
+      }
+    }
 
+    function prevStep() {
+      if (currentStep > 0) {
+        currentStep--;
+        updateUI();
+      }
+    }
+
+    function updateUI() {
       const card = document.getElementById('card');
       const btn = document.getElementById('next-btn');
-      currentStep++;
+      const backBtn = document.getElementById('back-btn');
+      
+      clearTimeout(cardHideTimer);
 
-      if (currentStep === 1) {
-        // Показываем текст с выравниванием по левому краю для удобства чтения
-        showText(GREETING_TITLE, GREETING_TEXT, 'left');
+      // Сброс видимости плашки, если мы возвращаемся с Галактики
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+      card.style.pointerEvents = 'auto';
+      btn.style.display = 'inline-block';
+      
+      // Кнопка назад показывается всегда, кроме 0 шага
+      backBtn.style.display = currentStep > 0 ? 'flex' : 'none';
+
+      if (currentStep === 0) {
+        showText("Сюрприз 🎁", "Нажми на кнопку ниже...", 'right', 0);
+        btn.innerText = "Открыть";
+      } else if (currentStep === 1) {
+        showText(GREETING_TITLE, GREETING_TEXT, 'left', 0);
         btn.innerText = "Далее ❤️";
       } else if (currentStep === 2) {
-        // Короткие тексты выравниваем по правому краю
-        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь и тепло к тебе.", 'right');
+        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь и тепло к тебе.", 'right', 8000);
         btn.innerText = "Далее 🌌";
       } else if (currentStep === 3) {
-        showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 'right');
+        showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 'right', 6000);
+        btn.style.display = 'none'; 
         
-        btn.style.display = 'none'; // Кнопка исчезает навсегда
-
-        initInteractivity();
+        cardHideTimer = setTimeout(() => {
+          if (currentStep === 3) { // Проверка, что мы всё ещё на 3 шаге
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(15px)';
+            card.style.pointerEvents = 'none';
+          }
+        }, 6000);
       }
     }
 
-    function initInteractivity() {
-      const onPointerDown = (e) => {
-        if (currentStep !== 3) return;
-        isInteracting = true; showWords = true; 
-        clearTimeout(interactionTimeout);
-        pointerX = e.clientX; pointerY = e.clientY;
-      };
-
-      const onPointerMove = (e) => {
-        if (currentStep !== 3 || !isInteracting) return;
-        showWords = true; clearTimeout(interactionTimeout);
-        const deltaX = e.clientX - pointerX; const deltaY = e.clientY - pointerY;
-        targetRotationY += deltaX * 0.007; targetRotationX += deltaY * 0.007;
-        pointerX = e.clientX; pointerY = e.clientY;
-      };
-
-      const onPointerUp = () => {
-        if (!isInteracting) return;
-        isInteracting = false;
-        interactionTimeout = setTimeout(() => { showWords = false; }, 2500);
-      };
-
-      window.addEventListener('pointerdown', onPointerDown);
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
-    }
+    // Обработчики касаний (Инициализируем один раз)
+    const onPointerDown = (e) => {
+      if (currentStep !== 3) return;
+      isInteracting = true; showWords = true; 
+      clearTimeout(interactionTimeout);
+      pointerX = e.clientX; pointerY = e.clientY;
+    };
+    const onPointerMove = (e) => {
+      if (currentStep !== 3 || !isInteracting) return;
+      showWords = true; clearTimeout(interactionTimeout);
+      const deltaX = e.clientX - pointerX; const deltaY = e.clientY - pointerY;
+      targetRotationY += deltaX * 0.007; targetRotationX += deltaY * 0.007;
+      pointerX = e.clientX; pointerY = e.clientY;
+    };
+    const onPointerUp = () => {
+      if (!isInteracting) return;
+      isInteracting = false;
+      interactionTimeout = setTimeout(() => { showWords = false; }, 2500);
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
 
     // --- АНИМАЦИОННЫЙ ЦИКЛ ---
     const clock = new THREE.Clock();
@@ -452,12 +481,8 @@
           currentPos[i] += baseVelocities[i];
           currentPos[i+1] += baseVelocities[i+1];
           currentPos[i+2] += baseVelocities[i+2];
-
-          baseVelocities[i] *= 0.96;   
-          baseVelocities[i+1] *= 0.96; 
-          baseVelocities[i+2] *= 0.96;
+          baseVelocities[i] *= 0.96; baseVelocities[i+1] *= 0.96; baseVelocities[i+2] *= 0.96;
           baseVelocities[i+1] -= 0.01;  
-
           if (Math.abs(currentPos[i]) > 150) currentPos[i] *= -0.9;
           if (Math.abs(currentPos[i+1]) > 150) currentPos[i+1] *= -0.9;
 
@@ -476,9 +501,7 @@
       }
       posAttr.needsUpdate = true; colorAttr.needsUpdate = true;
 
-      if (currentStep === 1 && Math.random() < 0.05) {
-        triggerHeartFirework();
-      }
+      if (currentStep === 1 && Math.random() < 0.05) triggerHeartFirework();
 
       if (currentStep === 3) {
         particleSystem.rotation.y += (targetRotationY - particleSystem.rotation.y) * 0.08;
