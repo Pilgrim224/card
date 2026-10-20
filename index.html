@@ -5,11 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>С Днём Рождения!</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: #050508;
       color: #fff;
@@ -19,15 +15,9 @@
       height: 100vh;
     }
     #canvas-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
     }
     
-    /* Контейнер прижимает плашку к ПРАВОМУ НИЖНЕМУ краю */
     .ui-overlay {
       position: absolute;
       bottom: 20px;
@@ -39,7 +29,6 @@
       align-items: flex-end;
     }
     
-    /* Сама карточка - маленькая и компактная */
     .card-box {
       background: rgba(15, 15, 25, 0.7);
       backdrop-filter: blur(10px);
@@ -48,7 +37,7 @@
       padding: 15px;
       border-radius: 16px;
       text-align: right;
-      max-width: 260px; /* Очень компактная */
+      max-width: 260px;
       box-shadow: 0 5px 20px rgba(0,0,0,0.5);
       transition: opacity 0.5s ease;
       pointer-events: auto;
@@ -57,7 +46,6 @@
       align-items: flex-end;
     }
 
-    /* Блок с текстом, который будет исчезать */
     #text-content {
       transition: opacity 1s ease;
       opacity: 1;
@@ -93,9 +81,7 @@
       transition: transform 0.2s ease;
       margin-top: 4px;
     }
-    .btn:active {
-      transform: scale(0.95);
-    }
+    .btn:active { transform: scale(0.95); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -115,34 +101,27 @@
 
   <script>
     const PHOTO_URL = 'https://i.postimg.cc/B6My1kj1/IMG-20250820-113600.jpg'; 
-    const PARTICLE_COUNT = 15000;
+    const PARTICLE_COUNT = 20000; // Больше частиц для четкости лица
 
     let currentStep = 0;
     let textTimer;
 
-    // Функция для показа текста и его автоматического скрытия
     function showText(titleText, descText, hideAfterMs) {
       const textContent = document.getElementById('text-content');
       const title = document.getElementById('title');
       const desc = document.getElementById('description');
 
-      clearTimeout(textTimer); // Сбрасываем старый таймер
-      
+      clearTimeout(textTimer); 
       title.innerText = titleText;
       desc.innerHTML = descText;
       
       textContent.style.display = 'block';
-      setTimeout(() => {
-        textContent.style.opacity = '1';
-      }, 50);
+      setTimeout(() => { textContent.style.opacity = '1'; }, 50);
 
-      // Если указано время, прячем текст
       if (hideAfterMs > 0) {
         textTimer = setTimeout(() => {
-          textContent.style.opacity = '0'; // Плавное исчезновение
-          setTimeout(() => {
-            textContent.style.display = 'none'; // Убираем элемент, оставляем только кнопку
-          }, 1000);
+          textContent.style.opacity = '0';
+          setTimeout(() => { textContent.style.display = 'none'; }, 1000);
         }, hideAfterMs);
       }
     }
@@ -159,8 +138,7 @@
 
     function createHeartTexture() {
       const canvas = document.createElement('canvas');
-      canvas.width = 64;
-      canvas.height = 64;
+      canvas.width = 64; canvas.height = 64;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -175,24 +153,31 @@
 
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const targetPhoto = new Float32Array(PARTICLE_COUNT * 3);
-    const targetGalaxy = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
+    
+    // Целевые массивы позиций и цветов для фото и галактики
+    const targetPhoto = new Float32Array(PARTICLE_COUNT * 3);
+    const targetPhotoColors = new Float32Array(PARTICLE_COUNT * 3);
+    const targetGalaxy = new Float32Array(PARTICLE_COUNT * 3);
+    const targetGalaxyColors = new Float32Array(PARTICLE_COUNT * 3);
 
     for (let i = 0; i < PARTICLE_COUNT * 3; i += 3) {
+      // Изначальный хаос
       positions[i] = (Math.random() - 0.5) * 300;
       positions[i + 1] = (Math.random() - 0.5) * 300;
       positions[i + 2] = (Math.random() - 0.5) * 300;
+      
+      // Изначальный розовый цвет
       colors[i] = 1.0;
-      colors[i + 1] = 0.5;
-      colors[i + 2] = 0.7;
+      colors[i + 1] = 0.4;
+      colors[i + 2] = 0.6;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 1.8,
+      size: 1.3, // Уменьшили размер для чёткости
       map: createHeartTexture(),
       transparent: true,
       alphaTest: 0.1,
@@ -214,9 +199,15 @@
         const randomX = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
         const randomY = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
         const randomZ = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
+        
         targetGalaxy[i3] = Math.cos(branchAngle + spin) * radius + randomX;
         targetGalaxy[i3 + 1] = randomY;
         targetGalaxy[i3 + 2] = Math.sin(branchAngle + spin) * radius + randomZ;
+        
+        // Цвета галактики (сине-розовые)
+        targetGalaxyColors[i3] = 0.7 + Math.random() * 0.3; // R
+        targetGalaxyColors[i3 + 1] = 0.3 + Math.random() * 0.4; // G
+        targetGalaxyColors[i3 + 2] = 0.8 + Math.random() * 0.2; // B
       }
     }
     generateGalaxyTargets();
@@ -227,29 +218,54 @@
     img.onload = () => {
       const imgCanvas = document.createElement('canvas');
       const ctx = imgCanvas.getContext('2d');
-      const size = 150;
-      imgCanvas.width = size;
-      imgCanvas.height = size;
-      ctx.drawImage(img, 0, 0, size, size);
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const i3 = i * 3;
-        const x = Math.floor(Math.random() * size);
-        const y = Math.floor(Math.random() * size);
-        targetPhoto[i3] = (x - size / 2) * 0.5;
-        targetPhoto[i3 + 1] = -(y - size / 2) * 0.5;
-        targetPhoto[i3 + 2] = (Math.random() - 0.5) * 2;
-      }
+      
+      // Высчитываем сетку пикселей под количество частиц
+      const aspect = img.width / img.height;
+      const height = Math.floor(Math.sqrt(PARTICLE_COUNT / aspect));
+      const width = Math.floor(height * aspect);
+      
+      imgCanvas.width = width;
+      imgCanvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      try {
+        const imgData = ctx.getImageData(0, 0, width, height).data;
+        let pIndex = 0;
+        
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            if (pIndex >= PARTICLE_COUNT) break;
+            const i3 = pIndex * 3;
+            const pixelIndex = (y * width + x) * 4;
+            
+            // Расставляем частицы ровной сеткой
+            targetPhoto[i3] = (x - width / 2) * 0.8;
+            targetPhoto[i3 + 1] = -(y - height / 2) * 0.8;
+            targetPhoto[i3 + 2] = 0;
+            
+            // Забираем оригинальный цвет с фото
+            targetPhotoColors[i3] = imgData[pixelIndex] / 255;
+            targetPhotoColors[i3 + 1] = imgData[pixelIndex + 1] / 255;
+            targetPhotoColors[i3 + 2] = imgData[pixelIndex + 2] / 255;
+            
+            pIndex++;
+          }
+        }
+        // Прячем лишние частицы, если остались
+        for (; pIndex < PARTICLE_COUNT; pIndex++) {
+            targetPhoto[pIndex * 3] = 0; targetPhoto[pIndex * 3 + 1] = 0; targetPhoto[pIndex * 3 + 2] = -1000;
+        }
+      } catch(e) { console.error("Ошибка загрузки пикселей", e); }
     };
 
     function nextStep() {
       const card = document.getElementById('card');
       const btn = document.getElementById('next-btn');
-
       currentStep++;
 
       if (currentStep === 1) {
-        // ШАГ 1: ПОЗДРАВЛЕНИЕ (Исчезнет через 12 секунд)
-        showText("С Днём Рождения! 🎂🎉", "Здесь будет твой длинный текст поздравления. Можешь написать всё что угодно, текст сам исчезнет через 12 секунд!", 12000);
+        // ШАГ 1: ПОЗДРАВЛЕНИЕ (Исчезнет через 15 секунд)
+        showText("С Днём Рождения! 🎂🎉", "Здесь будет твой текст поздравления. Напиши сюда всё что хочешь, текст сам исчезнет через 15 секунд!", 15000);
         btn.innerText = "Далее ❤️";
       } else if (currentStep === 2) {
         // ШАГ 2: ФОТО (Исчезнет через 8 секунд)
@@ -267,19 +283,28 @@
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
+      
       const posAttr = geometry.attributes.position;
+      const colorAttr = geometry.attributes.color;
       const currentPos = posAttr.array;
+      const currentColors = colorAttr.array;
+      
       let speed = 2.0 * delta;
 
       for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
         if (currentStep === 2) {
-          currentPos[i] += (targetPhoto[i] - currentPos[i]) * speed; // Собираем фото
+          // Плавный переход позиций и цветов в ФОТО
+          currentPos[i] += (targetPhoto[i] - currentPos[i]) * speed; 
+          currentColors[i] += (targetPhotoColors[i] - currentColors[i]) * speed;
         } else if (currentStep === 3) {
-          currentPos[i] += (targetGalaxy[i] - currentPos[i]) * speed; // Собираем галактику
+          // Плавный переход позиций и цветов в ГАЛАКТИКУ
+          currentPos[i] += (targetGalaxy[i] - currentPos[i]) * speed; 
+          currentColors[i] += (targetGalaxyColors[i] - currentColors[i]) * speed;
         }
       }
 
       posAttr.needsUpdate = true;
+      colorAttr.needsUpdate = true;
 
       if (currentStep === 3) {
         particleSystem.rotation.y += 0.25 * delta;
