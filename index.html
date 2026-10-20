@@ -15,7 +15,6 @@
       height: 100vh;
       user-select: none;
       -webkit-user-select: none;
-      /* Важно для мобилок: отключаем жесты браузера */
       touch-action: none; 
     }
     #canvas-container {
@@ -106,24 +105,23 @@
 
   <script>
     // --- НАСТРОЙКИ ---
-    const PHOTO_URL = 'IMG-20250820-113600.jpg'; // Имя твоего файла
+    const PHOTO_URL = 'IMG-20250820-113600.jpg'; // Твоё фото
     
+    // ТЕКСТ ПОЗДРАВЛЕНИЯ
     const GREETING_TITLE = "С Днём Рождения! 🎂🎉";
     const GREETING_TEXT = "Сегодня твой день, и я хочу пожелать тебе бесконечного счастья, улыбок и тепла! Пусть каждый миг будет наполнен волшебством. Оставайся такой же невероятной и потрясающей! ✨💖";
     
     const PARTICLE_COUNT = 20000; 
+    const FIREWORK_PARTICLES = 3000; // Количество искр для салютов
 
-    // Массив комплиментов
     const COMPLIMENTS = ["ты милая ✨", "ты красивая ❤️", "ты лучшая 🎉", "восхитительная 🌸", "любимая 💕"];
 
     let currentStep = 0;
     let textTimer;
-
     let isInteracting = false;      
     let showWords = false;         
     let interactionTimeout = null;
 
-    // Вращение
     let targetRotationX = 0;
     let targetRotationY = 0;
     let pointerX = 0, pointerY = 0;
@@ -158,6 +156,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
+    // --- 1. СИСТЕМА СЕРДЕЧЕК (Фон, Фото, Галактика, Слова) ---
     function createHeartTexture() {
       const canvas = document.createElement('canvas');
       canvas.width = 64; canvas.height = 64;
@@ -188,10 +187,7 @@
       positions[i] = (Math.random() - 0.5) * 300;
       positions[i + 1] = (Math.random() - 0.5) * 300;
       positions[i + 2] = (Math.random() - 0.5) * 300;
-      
-      colors[i] = 1.0;
-      colors[i + 1] = 0.4;
-      colors[i + 2] = 0.6;
+      colors[i] = 1.0; colors[i + 1] = 0.4; colors[i + 2] = 0.6;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -206,11 +202,88 @@
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
-
     const particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
 
-    // --- ГЕНЕРАЦИЯ ГАЛАКТИКИ ---
+    // --- 2. СИСТЕМА САЛЮТОВ (Фейерверки) ---
+    function createCircleTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gradient.addColorStop(0, 'rgba(255,255,255,1)');
+      gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 32, 32);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const fwGeometry = new THREE.BufferGeometry();
+    const fwPositions = new Float32Array(FIREWORK_PARTICLES * 3);
+    const fwColors = new Float32Array(FIREWORK_PARTICLES * 3);
+    const fwVelocities = []; 
+
+    for (let i = 0; i < FIREWORK_PARTICLES; i++) {
+      fwPositions[i*3] = 0;
+      fwPositions[i*3+1] = -1000; // Прячем за экраном
+      fwPositions[i*3+2] = 0;
+      fwColors[i*3] = 0; fwColors[i*3+1] = 0; fwColors[i*3+2] = 0;
+      fwVelocities.push({x:0, y:0, z:0, life: 0});
+    }
+
+    fwGeometry.setAttribute('position', new THREE.BufferAttribute(fwPositions, 3));
+    fwGeometry.setAttribute('color', new THREE.BufferAttribute(fwColors, 3));
+
+    const fwMaterial = new THREE.PointsMaterial({
+      size: 3.0,
+      map: createCircleTexture(),
+      transparent: true,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const fwSystem = new THREE.Points(fwGeometry, fwMaterial);
+    scene.add(fwSystem);
+
+    let fwIndex = 0;
+    function launchFirework() {
+      // Случайная точка старта салюта
+      const originX = (Math.random() - 0.5) * 160;
+      const originY = Math.random() * 60 + 10; 
+      const originZ = (Math.random() - 0.5) * 60;
+      
+      // Яркий случайный цвет
+      const color = new THREE.Color();
+      color.setHSL(Math.random(), 1.0, 0.6); 
+      
+      // От 80 до 150 искр на один взрыв
+      const count = Math.floor(80 + Math.random() * 70);
+      for (let i = 0; i < count; i++) {
+        let idx = fwIndex % FIREWORK_PARTICLES;
+        fwIndex++;
+        
+        fwPositions[idx*3] = originX;
+        fwPositions[idx*3+1] = originY;
+        fwPositions[idx*3+2] = originZ;
+        
+        fwColors[idx*3] = color.r;
+        fwColors[idx*3+1] = color.g;
+        fwColors[idx*3+2] = color.b;
+        
+        // Разлетаются сферой во все стороны
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+        const speed = Math.random() * 1.5 + 0.5;
+        
+        fwVelocities[idx].x = Math.sin(phi) * Math.cos(theta) * speed;
+        fwVelocities[idx].y = Math.sin(phi) * Math.sin(theta) * speed;
+        fwVelocities[idx].z = Math.cos(phi) * speed;
+        fwVelocities[idx].life = 1.0; 
+      }
+    }
+
+    // --- ПОДГОТОВКА ФИГУР ---
     function generateGalaxyTargets() {
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const i3 = i * 3;
@@ -233,7 +306,6 @@
     }
     generateGalaxyTargets();
 
-    // --- ЗАГРУЗКА И ПОДГОТОВКА ФОТО ---
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.src = PHOTO_URL;
@@ -244,14 +316,12 @@
       const height = Math.floor(Math.sqrt(PARTICLE_COUNT / aspect));
       const width = Math.floor(height * aspect);
       
-      imgCanvas.width = width;
-      imgCanvas.height = height;
+      imgCanvas.width = width; imgCanvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
       
       try {
         const imgData = ctx.getImageData(0, 0, width, height).data;
         let pIndex = 0;
-        
         for (let y = 0; y < height; y++) {
           for (let x = 0; x < width; x++) {
             if (pIndex >= PARTICLE_COUNT) break;
@@ -265,7 +335,6 @@
             targetPhotoColors[i3] = imgData[pixelIndex] / 255;
             targetPhotoColors[i3 + 1] = imgData[pixelIndex + 1] / 255;
             targetPhotoColors[i3 + 2] = imgData[pixelIndex + 2] / 255;
-            
             pIndex++;
           }
         }
@@ -275,13 +344,11 @@
       } catch(e) { console.error("Ошибка загрузки пикселей", e); }
     };
 
-    // --- ГЕНЕРАЦИЯ СЛОВ ---
     function generateWordsTargets() {
       const textCanvas = document.createElement('canvas');
       const tCtx = textCanvas.getContext('2d');
       const particlesPerWord = Math.floor(PARTICLE_COUNT / COMPLIMENTS.length);
 
-      // Расположение слов
       const offsets = [
         { x: -30, y: 25,  z: 10 },  
         { x: 30,  y: 18,  z: -10 }, 
@@ -294,14 +361,11 @@
         const wordText = COMPLIMENTS[w];
         const offset = offsets[w];
 
-        // Крупный шрифт для читаемости
-        textCanvas.width = 300;
-        textCanvas.height = 80;
+        textCanvas.width = 300; textCanvas.height = 80;
         tCtx.clearRect(0, 0, 300, 80);
         tCtx.fillStyle = '#ffffff';
-        tCtx.font = 'bold 30px "Segoe UI", Roboto, sans-serif'; // Увеличили размер букв
-        tCtx.textAlign = 'center';
-        tCtx.textBaseline = 'middle';
+        tCtx.font = 'bold 30px "Segoe UI", Roboto, sans-serif';
+        tCtx.textAlign = 'center'; tCtx.textBaseline = 'middle';
         tCtx.fillText(wordText, 150, 40);
 
         const imgData = tCtx.getImageData(0, 0, 300, 80).data;
@@ -331,8 +395,6 @@
             targetWords[i3 + 1] = (Math.random() - 0.5) * 10 + offset.y;
             targetWords[i3 + 2] = offset.z;
           }
-
-          // Градиент цвета для слов
           targetWordsColors[i3] = 1.0; 
           targetWordsColors[i3 + 1] = 0.35 + Math.random() * 0.35; 
           targetWordsColors[i3 + 2] = 0.55 + Math.random() * 0.45; 
@@ -355,55 +417,37 @@
         btn.innerText = "Далее 🌌";
       } else if (currentStep === 3) {
         showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 6000);
-        
         setTimeout(() => {
           card.style.opacity = '0';
           card.style.transform = 'translateY(15px)';
           card.style.pointerEvents = 'none';
         }, 6000);
-
         initInteractivity();
       }
     }
 
-    // --- ЕДИНЫЙ ПОИНТЕР-МЕНЕДЖЕР (ТАКТИЛЬНЫЙ ИНТЕРАКТИВ) ---
     function initInteractivity() {
       const onPointerDown = (e) => {
         if (currentStep !== 3) return;
-        isInteracting = true;
-        showWords = true; 
+        isInteracting = true; showWords = true; 
         clearTimeout(interactionTimeout);
-
-        pointerX = e.clientX;
-        pointerY = e.clientY;
+        pointerX = e.clientX; pointerY = e.clientY;
       };
 
       const onPointerMove = (e) => {
         if (currentStep !== 3 || !isInteracting) return;
-        showWords = true;
-        clearTimeout(interactionTimeout);
-
-        const deltaX = e.clientX - pointerX;
-        const deltaY = e.clientY - pointerY;
-
-        targetRotationY += deltaX * 0.007;
-        targetRotationX += deltaY * 0.007;
-
-        pointerX = e.clientX;
-        pointerY = e.clientY;
+        showWords = true; clearTimeout(interactionTimeout);
+        const deltaX = e.clientX - pointerX; const deltaY = e.clientY - pointerY;
+        targetRotationY += deltaX * 0.007; targetRotationX += deltaY * 0.007;
+        pointerX = e.clientX; pointerY = e.clientY;
       };
 
       const onPointerUp = () => {
         if (!isInteracting) return;
         isInteracting = false;
-
-        // Возвращаем в галактику через 2.5 секунды бездействия
-        interactionTimeout = setTimeout(() => {
-          showWords = false;
-        }, 2500);
+        interactionTimeout = setTimeout(() => { showWords = false; }, 2500);
       };
 
-      // Подключаем универсальные pointer-события
       window.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
@@ -416,13 +460,13 @@
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      
+      let speed = 2.0 * delta;
+
+      // 1. Анимация сердечек
       const posAttr = geometry.attributes.position;
       const colorAttr = geometry.attributes.color;
       const currentPos = posAttr.array;
       const currentColors = colorAttr.array;
-      
-      let speed = 2.0 * delta;
 
       for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
         if (currentStep === 2) {
@@ -438,19 +482,56 @@
           }
         }
       }
+      posAttr.needsUpdate = true; colorAttr.needsUpdate = true;
 
-      posAttr.needsUpdate = true;
-      colorAttr.needsUpdate = true;
-
+      // Вращение сцены с сердечками
       if (currentStep === 3) {
         particleSystem.rotation.y += (targetRotationY - particleSystem.rotation.y) * 0.08;
         particleSystem.rotation.x += (targetRotationX - particleSystem.rotation.x) * 0.08;
-        
-        if (!isInteracting) {
-          targetRotationY += 0.15 * delta;
-        }
+        if (!isInteracting) targetRotationY += 0.15 * delta;
       } else {
         particleSystem.rotation.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.1;
+      }
+
+      // 2. Анимация салютов (ТОЛЬКО на 1 шаге)
+      if (currentStep === 1) {
+        // Случайно запускаем 1-2 салюта в секунду
+        if (Math.random() < 0.03) launchFirework();
+      }
+
+      const fwPosAttr = fwGeometry.attributes.position;
+      const fwColAttr = fwGeometry.attributes.color;
+      let fwUpdated = false;
+
+      for (let i = 0; i < FIREWORK_PARTICLES; i++) {
+        let vel = fwVelocities[i];
+        if (vel.life > 0) {
+          fwUpdated = true;
+          // Физика: полет, гравитация, сопротивление
+          fwPosAttr.array[i*3] += vel.x;
+          fwPosAttr.array[i*3+1] += vel.y;
+          fwPosAttr.array[i*3+2] += vel.z;
+          
+          vel.x *= 0.95; 
+          vel.y *= 0.95; 
+          vel.z *= 0.95;
+          vel.y -= 0.03; // Гравитация (падают вниз)
+          
+          vel.life -= 0.015; // Скорость затухания
+          
+          // Цвет плавно тухнет
+          fwColAttr.array[i*3] *= 0.95;
+          fwColAttr.array[i*3+1] *= 0.95;
+          fwColAttr.array[i*3+2] *= 0.95;
+          
+          if (vel.life <= 0) {
+            fwPosAttr.array[i*3+1] = -1000; // Прячем искру
+          }
+        }
+      }
+      if (fwUpdated) {
+        fwPosAttr.needsUpdate = true;
+        fwColAttr.needsUpdate = true;
       }
 
       renderer.render(scene, camera);
