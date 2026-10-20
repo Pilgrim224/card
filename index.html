@@ -33,16 +33,19 @@
       align-items: flex-end;
     }
     
+    /* Карточка стала чуть шире для удобного чтения текста */
     .card-box {
-      background: rgba(15, 15, 25, 0.7);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(15, 15, 25, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 15px;
+      padding: 20px;
       border-radius: 16px;
       text-align: right;
-      max-width: 260px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+      max-width: 320px; 
+      max-height: 70vh; /* Ограничение высоты */
+      overflow-y: auto; /* Добавлена прокрутка для длинного текста */
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
       transition: opacity 0.5s ease, transform 0.5s ease;
       pointer-events: auto;
       display: flex;
@@ -50,15 +53,20 @@
       align-items: flex-end;
     }
 
+    /* Эстетичный скроллбар для текста */
+    .card-box::-webkit-scrollbar { width: 4px; }
+    .card-box::-webkit-scrollbar-thumb { background: rgba(255, 75, 114, 0.5); border-radius: 4px; }
+
     #text-content {
       transition: opacity 1s ease;
       opacity: 1;
+      width: 100%;
     }
     
     h1.hb-title {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       background: linear-gradient(135deg, #ff769c, #ff4b72, #ffd166);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -66,24 +74,26 @@
     }
 
     p {
-      font-size: 0.85rem;
-      line-height: 1.4;
+      font-size: 0.88rem;
+      line-height: 1.5;
       color: #e2e8f0;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      text-align: left; /* Текст письма выравниваем по левому краю для удобства */
     }
 
     .btn {
       background: linear-gradient(135deg, #ff4b72, #ff769c);
       color: #fff;
       border: none;
-      padding: 8px 18px;
-      font-size: 0.85rem;
+      padding: 10px 22px;
+      font-size: 0.9rem;
       font-weight: 600;
       border-radius: 20px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 75, 114, 0.3);
+      box-shadow: 0 4px 15px rgba(255, 75, 114, 0.4);
       transition: transform 0.2s ease;
-      margin-top: 4px;
+      margin-top: 5px;
+      align-self: flex-end;
     }
     .btn:active { transform: scale(0.95); }
   </style>
@@ -101,8 +111,8 @@
   <div class="ui-overlay">
     <div class="card-box" id="card">
       <div id="text-content">
-        <h1 class="hb-title" id="title">Сюрприз 🎁</h1>
-        <p id="description">Нажми на кнопку ниже...</p>
+        <h1 class="hb-title" id="title" style="text-align: right;">Сюрприз 🎁</h1>
+        <p id="description" style="text-align: right;">Нажми на кнопку ниже...</p>
       </div>
       <button class="btn" id="next-btn" onclick="nextStep()">Открыть</button>
     </div>
@@ -112,8 +122,15 @@
     // --- НАСТРОЙКИ ---
     const PHOTO_URL = 'IMG-20250820-113600.jpg'; 
     
-    const GREETING_TITLE = "С Днём Рождения! 🎂🎉";
-    const GREETING_TEXT = "Моя любимая, нежная и самая невероятная! 20 лет это начало чего-то нового и я безумно счастлив, что могу разделить эту важную главу твоей жизни вместе с тобой. ​Ты — самое светлое, что со мной случилось. Ты наполнила мои дни смыслом, уютом и абсолютным теплом. Я люблю в тебе всё: твой искренний смех, то, как ты смотришь на меня, твои идеи и твою заботу. Рядом с тобой мне хочется сворачивать горы и становиться лучше каждый день. ​Я хочу пожелать тебе, чтобы твои глаза всегда сияли от счастья так же ярко, как сегодня. Пусть каждый твой шаг будет легким, а вдохновение никогда тебя не покидает. Ничего не бойся и смело иди к своим целям, а я всегда буду рядом — твоей главной поддержкой, твоей опорой и тем, кто крепко держит тебя за руку. ​Оставайся такой же искренней, чуткой и бесконечно красивой. С днем рождения, моя любовь! Твои двадцать — это только начало нашей большой, потрясающей истории. ✨💖";
+    const GREETING_TITLE = "С Днём Рождения, любимая! 🎂🎉";
+    
+    // Большой текст с абзацами (теги <br><br> делают отступы)
+    const GREETING_TEXT = `Моя любимая, нежная и самая невероятная!<br><br>
+    Сегодня тебе исполняется двадцать лет. Это совершенно потрясающий возраст — время, когда весь мир открыт перед тобой, когда самые смелые мечты становятся осязаемыми, а впереди ждет столько прекрасного. И я безумно счастлив, что могу разделить эту важную главу твоей жизни вместе с тобой.<br><br>
+    Ты — самое светлое, что со мной случилось. Ты наполнила мои дни смыслом, уютом и абсолютным теплом. Я люблю в тебе всё: твой искренний смех, то, как ты смотришь на меня, твои идеи и твою заботу. Рядом с тобой мне хочется сворачивать горы и становиться лучше каждый день.<br><br>
+    Я хочу пожелать тебе, чтобы твои глаза всегда сияли от счастья так же ярко, как сегодня. Пусть каждый твой шаг будет легким, а вдохновение никогда тебя не покидает. Ничего не бойся и смело иди к своим целям, а я всегда буду рядом — твоей главной поддержкой, твоей опорой и тем, кто крепко держит тебя за руку.<br><br>
+    Оставайся такой же искренней, чуткой и бесконечно красивой. С днем рождения, моя любовь! Твои двадцать — это только начало нашей большой, потрясающей истории.`;
+    
     const PARTICLE_COUNT = 20000; 
     const COMPLIMENTS = ["ты милая ✨", "ты красивая ❤️", "ты лучшая 🎉", "восхитительная 🌸", "любимая 💕"];
 
@@ -127,24 +144,19 @@
     let targetRotationY = 0;
     let pointerX = 0, pointerY = 0;
 
-    function showText(titleText, descText, hideAfterMs) {
+    function showText(titleText, descText, textAlign = 'left') {
       const textContent = document.getElementById('text-content');
       const title = document.getElementById('title');
       const desc = document.getElementById('description');
 
-      clearTimeout(textTimer); 
       title.innerText = titleText;
       desc.innerHTML = descText;
       
+      title.style.textAlign = 'right';
+      desc.style.textAlign = textAlign; // Позволяет менять выравнивание (письмо слева, остальное справа)
+      
       textContent.style.display = 'block';
       setTimeout(() => { textContent.style.opacity = '1'; }, 50);
-
-      if (hideAfterMs > 0) {
-        textTimer = setTimeout(() => {
-          textContent.style.opacity = '0';
-          setTimeout(() => { textContent.style.display = 'none'; }, 1000);
-        }, hideAfterMs);
-      }
     }
 
     const container = document.getElementById('canvas-container');
@@ -370,23 +382,17 @@
       currentStep++;
 
       if (currentStep === 1) {
-        showText(GREETING_TITLE, GREETING_TEXT, 15000);
+        // Показываем текст с выравниванием по левому краю для удобства чтения
+        showText(GREETING_TITLE, GREETING_TEXT, 'left');
         btn.innerText = "Далее ❤️";
       } else if (currentStep === 2) {
-        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь и тепло к тебе.", 8000);
+        // Короткие тексты выравниваем по правому краю
+        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь и тепло к тебе.", 'right');
         btn.innerText = "Далее 🌌";
       } else if (currentStep === 3) {
-        showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 6000);
+        showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 'right');
         
-        // Прячем саму кнопку немедленно!
-        btn.style.display = 'none';
-
-        // А вся карточка с текстом плавно исчезнет через 6 секунд
-        setTimeout(() => {
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(15px)';
-          card.style.pointerEvents = 'none';
-        }, 6000);
+        btn.style.display = 'none'; // Кнопка исчезает навсегда
 
         initInteractivity();
       }
