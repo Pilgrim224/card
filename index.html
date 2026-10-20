@@ -379,6 +379,10 @@
       } else if (currentStep === 3) {
         showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 6000);
         
+        // Прячем саму кнопку немедленно!
+        btn.style.display = 'none';
+
+        // А вся карточка с текстом плавно исчезнет через 6 секунд
         setTimeout(() => {
           card.style.opacity = '0';
           card.style.transform = 'translateY(15px)';
