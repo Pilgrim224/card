@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>С Днём Рождения!</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #050508;
+      color: #fff;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 30px 20px;
+      pointer-events: none;
+    }
+    .card-box {
+      background: rgba(15, 15, 25, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 28px 24px;
+      border-radius: 24px;
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      pointer-events: auto;
+    }
+    
+    /* Красивый крупный заголовок */
+    h1.hb-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ff769c, #ff4b72, #ffd166);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(255, 118, 156, 0.3);
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+
+    p {
+      font-size: 1rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      margin-bottom: 22px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #ff4b72, #ff769c);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255, 75, 114, 0.5);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <div class="ui-overlay">
+    <div></div>
+    
+    <div class="card-box" id="card">
+      <h1 class="hb-title" id="title">С Днём Рождения! 🎂🎉</h1>
+      <p id="description">У меня есть кое-что особенное для тебя. Нажми кнопку ниже, чтобы открыть сюрприз...</p>
+      <button class="btn" id="next-btn" onclick="nextStep()">Открыть 🎁</button>
+    </div>
+
+    <div></div>
+  </div>
+
+  <script>
+    const PHOTO_URL = 'https://i.postimg.cc/B6My1kj1/IMG-20250820-113600.jpg'; 
+    const PARTICLE_COUNT = 15000;
+
+    let currentStep = 0;
+
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 100;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    function createHeartTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(32, 52);
+      ctx.bezierCurveTo(12, 34, 4, 22, 16, 10);
+      ctx.bezierCurveTo(24, 2, 32, 12, 32, 12);
+      ctx.bezierCurveTo(32, 12, 40, 2, 48, 10);
+      ctx.bezierCurveTo(60, 22, 52, 34, 32, 52);
+      ctx.fill();
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    const targetPhoto = new Float32Array(PARTICLE_COUNT * 3);
+    const targetGalaxy = new Float32Array(PARTICLE_COUNT * 3);
+    const colors = new Float32Array(PARTICLE_COUNT * 3);
+
+    for (let i = 0; i < PARTICLE_COUNT * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 300;
+      positions[i + 1] = (Math.random() - 0.5) * 300;
+      positions[i + 2] = (Math.random() - 0.5) * 300;
+
+      colors[i] = 1.0;
+      colors[i + 1] = 0.5;
+      colors[i + 2] = 0.7;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 1.8,
+      map: createHeartTexture(),
+      transparent: true,
+      alphaTest: 0.1,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+
+    function generateGalaxyTargets() {
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const i3 = i * 3;
+        const radius = Math.random() * 80 + 5;
+        const arms = 3;
+        const spin = radius * 0.1;
+        const branchAngle = ((i % arms) / arms) * Math.PI * 2;
+
+        const randomX = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
+        const randomY = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
+        const randomZ = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 5;
+
+        targetGalaxy[i3] = Math.cos(branchAngle + spin) * radius + randomX;
+        targetGalaxy[i3 + 1] = randomY;
+        targetGalaxy[i3 + 2] = Math.sin(branchAngle + spin) * radius + randomZ;
+      }
+    }
+    generateGalaxyTargets();
+
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = PHOTO_URL;
+    img.onload = () => {
+      const imgCanvas = document.createElement('canvas');
+      const ctx = imgCanvas.getContext('2d');
+      const size = 150;
+      imgCanvas.width = size;
+      imgCanvas.height = size;
+
+      ctx.drawImage(img, 0, 0, size, size);
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const i3 = i * 3;
+        const x = Math.floor(Math.random() * size);
+        const y = Math.floor(Math.random() * size);
+
+        targetPhoto[i3] = (x - size / 2) * 0.5;
+        targetPhoto[i3 + 1] = -(y - size / 2) * 0.5;
+        targetPhoto[i3 + 2] = (Math.random() - 0.5) * 2;
+      }
+    };
+
+    function nextStep() {
+      const card = document.getElementById('card');
+      const title = document.getElementById('title');
+      const desc = document.getElementById('description');
+      const btn = document.getElementById('next-btn');
+
+      currentStep++;
+
+      if (currentStep === 1) {
+        title.innerText = "Ты самая лучшая! ❤️";
+        desc.innerText = "Каждое сердечко здесь — это маленькое напоминание о том, как ты прекрасна!";
+        btn.innerText = "Далее 🌌";
+      } else if (currentStep === 2) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.pointerEvents = 'none';
+      }
+    }
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const posAttr = geometry.attributes.position;
+      const currentPos = posAttr.array;
+
+      let speed = 2.0 * delta;
+
+      for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+        if (currentStep === 1) {
+          currentPos[i] += (targetPhoto[i] - currentPos[i]) * speed;
+        } else if (currentStep === 2) {
+          currentPos[i] += (targetGalaxy[i] - currentPos[i]) * speed;
+        }
+      }
+
+      posAttr.needsUpdate = true;
+
+      if (currentStep === 2) {
+        particleSystem.rotation.y += 0.25 * delta;
+        particleSystem.rotation.x += 0.08 * delta;
+      } else {
+        particleSystem.rotation.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.1;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
