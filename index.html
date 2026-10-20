@@ -13,6 +13,8 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
     }
     #canvas-container {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
@@ -39,7 +41,7 @@
       text-align: right;
       max-width: 260px;
       box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-      transition: opacity 0.5s ease;
+      transition: opacity 0.5s ease, transform 0.5s ease;
       pointer-events: auto;
       display: flex;
       flex-direction: column;
@@ -100,11 +102,32 @@
   </div>
 
   <script>
-    const PHOTO_URL = 'IMG-20250820-113600.jpg.'; 
-    const PARTICLE_COUNT = 20000; // Больше частиц для четкости лица
+    // --- НАСТРОЙКИ ---
+    const PHOTO_URL = 'IMG-20250820-113600.jpg'; // Твоё загруженное фото
+    
+    // ТВОЙ ТЕКСТ ПОЗДРАВЛЕНИЯ (Можешь менять здесь на любой текст!)
+    const GREETING_TITLE = "С Днём Рождения! 🎂🎉";
+    const GREETING_TEXT = "Сегодня твой день, и я хочу пожелать тебе бесконечного счастья, улыбок и тепла! Пусть каждый миг будет наполнен волшебством. Оставайся такой же невероятной и потрясающей! ✨💖";
+    
+    const PARTICLE_COUNT = 20000; 
+
+    // Список комплиментов, в которые будут складываться звёзды
+    const COMPLIMENTS = ["ты милая ✨", "ты красивая ❤️", "ты лучшая 🎉", "восхитительная 🌸", "любимая 💕"];
 
     let currentStep = 0;
     let textTimer;
+
+    // Переменные для интерактивности
+    let isInteracting = false;      // Зажат ли экран пальцем/мышкой
+    let showWords = false;         // Перешли ли частицы в режим "слов"
+    let lastInteractionTime = 0;   // Время последнего взаимодействия
+    let interactionTimeout = null;
+
+    // Вращение камеры / мыши / тача
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+    let pointerX = 0, pointerY = 0;
+    let pointerId = null;
 
     function showText(titleText, descText, hideAfterMs) {
       const textContent = document.getElementById('text-content');
@@ -155,19 +178,19 @@
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
     
-    // Целевые массивы позиций и цветов для фото и галактики
+    // Массивы для позиций и цветов различных состояний
     const targetPhoto = new Float32Array(PARTICLE_COUNT * 3);
     const targetPhotoColors = new Float32Array(PARTICLE_COUNT * 3);
     const targetGalaxy = new Float32Array(PARTICLE_COUNT * 3);
     const targetGalaxyColors = new Float32Array(PARTICLE_COUNT * 3);
+    const targetWords = new Float32Array(PARTICLE_COUNT * 3);
+    const targetWordsColors = new Float32Array(PARTICLE_COUNT * 3);
 
     for (let i = 0; i < PARTICLE_COUNT * 3; i += 3) {
-      // Изначальный хаос
       positions[i] = (Math.random() - 0.5) * 300;
       positions[i + 1] = (Math.random() - 0.5) * 300;
       positions[i + 2] = (Math.random() - 0.5) * 300;
       
-      // Изначальный розовый цвет
       colors[i] = 1.0;
       colors[i + 1] = 0.4;
       colors[i + 2] = 0.6;
@@ -177,7 +200,7 @@
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 1.3, // Уменьшили размер для чёткости
+      size: 1.3,
       map: createHeartTexture(),
       transparent: true,
       alphaTest: 0.1,
@@ -189,6 +212,7 @@
     const particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
 
+    // --- ГЕНЕРАЦИЯ ГАЛАКТИКИ ---
     function generateGalaxyTargets() {
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const i3 = i * 3;
@@ -204,22 +228,20 @@
         targetGalaxy[i3 + 1] = randomY;
         targetGalaxy[i3 + 2] = Math.sin(branchAngle + spin) * radius + randomZ;
         
-        // Цвета галактики (сине-розовые)
-        targetGalaxyColors[i3] = 0.7 + Math.random() * 0.3; // R
-        targetGalaxyColors[i3 + 1] = 0.3 + Math.random() * 0.4; // G
-        targetGalaxyColors[i3 + 2] = 0.8 + Math.random() * 0.2; // B
+        targetGalaxyColors[i3] = 0.7 + Math.random() * 0.3;
+        targetGalaxyColors[i3 + 1] = 0.3 + Math.random() * 0.4;
+        targetGalaxyColors[i3 + 2] = 0.8 + Math.random() * 0.2;
       }
     }
     generateGalaxyTargets();
 
+    // --- ЗАГРУЗКА И ПОДГОТОВКА ФОТО ---
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.src = PHOTO_URL;
     img.onload = () => {
       const imgCanvas = document.createElement('canvas');
       const ctx = imgCanvas.getContext('2d');
-      
-      // Высчитываем сетку пикселей под количество частиц
       const aspect = img.width / img.height;
       const height = Math.floor(Math.sqrt(PARTICLE_COUNT / aspect));
       const width = Math.floor(height * aspect);
@@ -238,12 +260,10 @@
             const i3 = pIndex * 3;
             const pixelIndex = (y * width + x) * 4;
             
-            // Расставляем частицы ровной сеткой
             targetPhoto[i3] = (x - width / 2) * 0.8;
             targetPhoto[i3 + 1] = -(y - height / 2) * 0.8;
             targetPhoto[i3 + 2] = 0;
             
-            // Забираем оригинальный цвет с фото
             targetPhotoColors[i3] = imgData[pixelIndex] / 255;
             targetPhotoColors[i3 + 1] = imgData[pixelIndex + 1] / 255;
             targetPhotoColors[i3 + 2] = imgData[pixelIndex + 2] / 255;
@@ -251,33 +271,159 @@
             pIndex++;
           }
         }
-        // Прячем лишние частицы, если остались
         for (; pIndex < PARTICLE_COUNT; pIndex++) {
             targetPhoto[pIndex * 3] = 0; targetPhoto[pIndex * 3 + 1] = 0; targetPhoto[pIndex * 3 + 2] = -1000;
         }
       } catch(e) { console.error("Ошибка загрузки пикселей", e); }
     };
 
+    // --- ГЕНЕРАЦИЯ СЛОВ КОМПЛИМЕНТОВ ---
+    function generateWordsTargets() {
+      const textCanvas = document.createElement('canvas');
+      const tCtx = textCanvas.getContext('2d');
+      const particlesPerWord = Math.floor(PARTICLE_COUNT / COMPLIMENTS.length);
+
+      // Расположение слов в 3D пространстве
+      const offsets = [
+        { x: -30, y: 25,  z: 10 },  // ты милая
+        { x: 30,  y: 18,  z: -10 }, // ты красивая
+        { x: 0,   y: 0,   z: 15 },  // любимая
+        { x: -32, y: -18, z: -5 },  // ты лучшая
+        { x: 28,  y: -25, z: 5 }   // восхитительная
+      ];
+
+      for (let w = 0; w < COMPLIMENTS.length; w++) {
+        const wordText = COMPLIMENTS[w];
+        const offset = offsets[w];
+
+        // Рисуем слово на временном холсте
+        textCanvas.width = 250;
+        textCanvas.height = 60;
+        tCtx.clearRect(0, 0, 250, 60);
+        tCtx.fillStyle = '#ffffff';
+        tCtx.font = 'bold 22px "Segoe UI", Roboto, sans-serif';
+        tCtx.textAlign = 'center';
+        tCtx.textBaseline = 'middle';
+        tCtx.fillText(wordText, 125, 30);
+
+        const imgData = tCtx.getImageData(0, 0, 250, 60).data;
+        const validPixels = [];
+
+        // Собираем все заполненные пиксели слова
+        for (let y = 0; y < 60; y += 1.3) {
+          for (let x = 0; x < 250; x += 1.3) {
+            const idx = (Math.floor(y) * 250 + Math.floor(x)) * 4;
+            if (imgData[idx + 3] > 120) { // Если пиксель непрозрачный
+              validPixels.push({ x: (x - 125) * 0.22, y: -(y - 30) * 0.22 });
+            }
+          }
+        }
+
+        const startIdx = w * particlesPerWord;
+        const endIdx = startIdx + particlesPerWord;
+
+        for (let i = startIdx; i < endIdx; i++) {
+          const i3 = i * 3;
+          if (validPixels.length > 0) {
+            const p = validPixels[Math.floor(Math.random() * validPixels.length)];
+            targetWords[i3] = p.x + offset.x;
+            targetWords[i3 + 1] = p.y + offset.y;
+            targetWords[i3 + 2] = (Math.random() - 0.5) * 3 + offset.z;
+          } else {
+            targetWords[i3] = (Math.random() - 0.5) * 20 + offset.x;
+            targetWords[i3 + 1] = (Math.random() - 0.5) * 10 + offset.y;
+            targetWords[i3 + 2] = offset.z;
+          }
+
+          // Градиент цвета для слов (эффектный светящийся розово-желто-фиолетовый)
+          targetWordsColors[i3] = 1.0; // R
+          targetWordsColors[i3 + 1] = 0.3 + Math.random() * 0.4; // G
+          targetWordsColors[i3 + 2] = 0.5 + Math.random() * 0.5; // B
+        }
+      }
+    }
+    generateWordsTargets();
+
+    // --- КЛИК / НАЖАТИЕ НА КНОПКИ ---
     function nextStep() {
       const card = document.getElementById('card');
       const btn = document.getElementById('next-btn');
       currentStep++;
 
       if (currentStep === 1) {
-        // ШАГ 1: ПОЗДРАВЛЕНИЕ (Исчезнет через 15 секунд)
-        showText("С Днём Рождения! 🎂🎉", "Здесь будет твой текст поздравления. Напиши сюда всё что хочешь, текст сам исчезнет через 15 секунд!", 15000);
+        // ШАГ 1: Поздравление (исчезнет через 15 сек)
+        showText(GREETING_TITLE, GREETING_TEXT, 15000);
         btn.innerText = "Далее ❤️";
       } else if (currentStep === 2) {
-        // ШАГ 2: ФОТО (Исчезнет через 8 секунд)
-        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь к тебе.", 8000);
+        // ШАГ 2: Портрет (исчезнет через 8 сек)
+        showText("Это ты! ✨", "Каждое маленькое сердечко здесь — это моя любовь и тепло к тебе.", 8000);
         btn.innerText = "Далее 🌌";
       } else if (currentStep === 3) {
-        // ШАГ 3: ГАЛАКТИКА
-        card.style.opacity = '0';
-        card.style.pointerEvents = 'none';
+        // ШАГ 3: Галактика
+        showText("Загадай желание... ✨", "Попробуй поводить пальцем по экрану, чтобы почувствовать космос 🪄", 6000);
+        
+        // Скрываем плашку кнопки
+        setTimeout(() => {
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(15px)';
+          card.style.pointerEvents = 'none';
+        }, 6000);
+
+        // Включаем тач-интерактивы
+        initInteractivity();
       }
     }
 
+    // --- НАСТРОЙКА ТАЧА И МЫШИ (ВРАЩЕНИЕ И СЛОВА) ---
+    function initInteractivity() {
+      const onPointerDown = (e) => {
+        if (currentStep !== 3) return;
+        isInteracting = true;
+        showWords = true; // Сразу запускаем сборку слов
+        clearTimeout(interactionTimeout);
+
+        pointerX = e.clientX || (e.touches && e.touches[0].clientX);
+        pointerY = e.clientY || (e.touches && e.touches[0].clientY);
+      };
+
+      const onPointerMove = (e) => {
+        if (currentStep !== 3 || !isInteracting) return;
+        showWords = true;
+        clearTimeout(interactionTimeout);
+
+        const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+        const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        const deltaX = currentX - pointerX;
+        const deltaY = currentY - pointerY;
+
+        targetRotationY += deltaX * 0.007;
+        targetRotationX += deltaY * 0.007;
+
+        pointerX = currentX;
+        pointerY = currentY;
+      };
+
+      const onPointerUp = () => {
+        if (!isInteracting) return;
+        isInteracting = false;
+
+        // Ждем 2.5 секунды бездействия и плавно возвращаем в галактику
+        interactionTimeout = setTimeout(() => {
+          showWords = false;
+        }, 2500);
+      };
+
+      window.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+
+      window.addEventListener('touchstart', onPointerDown, { passive: true });
+      window.addEventListener('touchmove', onPointerMove, { passive: true });
+      window.addEventListener('touchend', onPointerUp);
+    }
+
+    // --- АНИМАЦИОННЫЙ ЦИКЛ ---
     const clock = new THREE.Clock();
 
     function animate() {
@@ -293,23 +439,37 @@
 
       for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
         if (currentStep === 2) {
-          // Плавный переход позиций и цветов в ФОТО
+          // ШАГ 2: Сборка портрета
           currentPos[i] += (targetPhoto[i] - currentPos[i]) * speed; 
           currentColors[i] += (targetPhotoColors[i] - currentColors[i]) * speed;
         } else if (currentStep === 3) {
-          // Плавный переход позиций и цветов в ГАЛАКТИКУ
-          currentPos[i] += (targetGalaxy[i] - currentPos[i]) * speed; 
-          currentColors[i] += (targetGalaxyColors[i] - currentColors[i]) * speed;
+          if (showWords) {
+            // ШАГ 3 (Касание): Превращение в комплименты
+            currentPos[i] += (targetWords[i] - currentPos[i]) * (speed * 1.5); 
+            currentColors[i] += (targetWordsColors[i] - currentColors[i]) * (speed * 1.5);
+          } else {
+            // ШАГ 3 (Бездействие): Обычная галактика
+            currentPos[i] += (targetGalaxy[i] - currentPos[i]) * speed; 
+            currentColors[i] += (targetGalaxyColors[i] - currentColors[i]) * speed;
+          }
         }
       }
 
       posAttr.needsUpdate = true;
       colorAttr.needsUpdate = true;
 
+      // Вращение сцены
       if (currentStep === 3) {
-        particleSystem.rotation.y += 0.25 * delta;
-        particleSystem.rotation.x += 0.08 * delta;
+        // Свободное вращение при свайпах
+        particleSystem.rotation.y += (targetRotationY - particleSystem.rotation.y) * 0.08;
+        particleSystem.rotation.x += (targetRotationX - particleSystem.rotation.x) * 0.08;
+        
+        // Постоянное фоновое вращение
+        if (!isInteracting) {
+          targetRotationY += 0.15 * delta;
+        }
       } else {
+        // Легкое покачивание в начале
         particleSystem.rotation.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.1;
       }
 
@@ -318,6 +478,7 @@
 
     animate();
 
+    // Адаптация экрана под мобильные устройства
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
